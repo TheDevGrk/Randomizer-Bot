@@ -13,11 +13,22 @@ class Randomizer(commands.Cog):
         print("Randomizer Cog is online")
     
     @app_commands.command(name = "randomizer", description = "Pick a random option! Lots of setting available!")
-    async def randomizer(self, interaction: discord.Interaction, options: str, wait: int):
+    @app_commands.describe(options = "These are the options you want the randomizer to choose from.  Separate each option with a comma (,).")
+    async def randomizer(self, interaction: discord.Interaction, options: str, wait: str):
         loadEmoji = "<a:loading:1261772710539952149>"
+        try:
+            waitTime = float(wait)
+        except:
+            for i in wait:
+                if i.lower() == "s":
+                    waitTime = wait[:wait.lower().index("s") + 1]
+                elif i.lower() == "m":
+                    waitTime = wait[:wait.lower().index("m") + 1] * 60
+                elif i.lower() == "h":
+                    waitTime = wait[:wait.lower().index("h") + 1] * 3600
+
         optionsList = []
         options = options.replace(", ", ",").replace(" ,", ",") + ","
-
         for i in options:
             if i == ",":
                 optionsList.append(options[:options.index(",")])
@@ -28,7 +39,8 @@ class Randomizer(commands.Cog):
         msg = msg + "\nThinking " + loadEmoji
         await interaction.response.send_message(msg)
 
-        time.sleep(wait)
+        time.sleep(waitTime)
+        print(1)
 
         await interaction.edit_original_response(content = f"The Winner is... {optionsList[random.randint(0, (len(optionsList) - 1))]}")
 
