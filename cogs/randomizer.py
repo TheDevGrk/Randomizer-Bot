@@ -12,13 +12,29 @@ class Randomizer(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print("Randomizer Cog is online")
-    
+
+    class RandomizerButtons(discord.ui.View):
+        def __init__(self, *, timeout: float = None, optionsList: list, weightsList: list):
+            super().__init__(timeout=timeout)
+            self.optionsList = optionsList
+            self.weightsList = weightsList
+
+        @discord.ui.button(label = "View Randomizer Options", style = discord.ButtonStyle.green)
+        async def viewOptions(self, interaction: discord.Interaction, button: discord.ui.Button):
+            embed = discord.Embed(title = "Randomizer Options", description = "Below are the options that were inputted for this randomizer and their weights.", color = discord.Colour.green())
+            fieldValue = ""
+            for i in range(len(self.optionsList)):
+                fieldValue = fieldValue + f"Option: {self.optionsList[i]} - Weight: {self.weightsList[i]}\n"
+            embed.add_field(name = "------------------------", value = fieldValue)
+
+            await interaction.response.send_message(embed = embed, ephemeral = True)
+
     randomizer = app_commands.Group(name = "randomizer", description = "Randomizer Command Group")
 
-    @randomizer.command(name = "weighted", description = "Pick a random option! Lots of setting available!")
-    @app_commands.describe(options = "These are the options you want the randomizer to choose from.  Separate each option with a comma (,).")
-    @app_commands.describe(wait = "The time you want the randomizer to RaNdOmIzE before it gives you an answer! Add S, M, or H to indicate seconds, minutes or hours, respectively.")
-    @app_commands.describe(weights = "These are the weights added to each option, the higher the weight, the more likely that option will be chosen. Separate each weight with a comma (,) and the position of the weights should correspond to the position of the options. Default weight is 1.")
+    @randomizer.command(name = "weighted", description = "Pick a random option! Lots of settings available!")
+    @app_commands.describe(options = "Do `/randomizer help command: weighted` for more info")
+    @app_commands.describe(wait = "Do `/randomizer help command: weighted` for more info")
+    @app_commands.describe(weights = "Do `/randomizer help command: weighted` for more info")
     async def weighted(self, interaction: discord.Interaction, options: str, wait: str, weights: str):
         loadEmoji = "<a:loading:1261772710539952149>"
         try:
@@ -64,15 +80,12 @@ class Randomizer(commands.Cog):
             for i in range(weightsList[n]):
                 weightedOptions.append(optionsList[n])
 
-        msg = ""
-        for i in optionsList:
-            msg = msg + i + "\n"
-        msg = msg + "\nThinking " + loadEmoji
-        await interaction.response.send_message(msg)
+        buttonClass = self.RandomizerButtons(optionsList = optionsList, weightsList = weightsList)
+        await interaction.response.send_message(embed = discord.Embed(title = "Thinking " + loadEmoji, color = discord.Colour.blue()), view = buttonClass)
 
         await asyncio.sleep(waitTime)
 
-        await interaction.edit_original_response(content = f"The Winner is... {weightedOptions[random.randint(0, (len(optionsList) - 1))]}")
+        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(optionsList) - 1))]}**__", color = discord.Colour.blue()))
 
     @randomizer.command(name = "help", description = "Find out how to use randomizer commands!")
     async def help(self, interaction: discord.Interaction, command: str = "all"):
