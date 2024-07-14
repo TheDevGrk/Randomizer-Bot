@@ -13,11 +13,13 @@ class Randomizer(commands.Cog):
     async def on_ready(self):
         print("Randomizer Cog is online")
     
-    @app_commands.command(name = "randomizer", description = "Pick a random option! Lots of setting available!")
+    randomizer = app_commands.Group(name = "randomizer", description = "Randomizer Command Group")
+
+    @randomizer.command(name = "weighted", description = "Pick a random option! Lots of setting available!")
     @app_commands.describe(options = "These are the options you want the randomizer to choose from.  Separate each option with a comma (,).")
     @app_commands.describe(wait = "The time you want the randomizer to RaNdOmIzE before it gives you an answer! Add S, M, or H to indicate seconds, minutes or hours, respectively.")
     @app_commands.describe(weights = "These are the weights added to each option, the higher the weight, the more likely that option will be chosen. Separate each weight with a comma (,) and the position of the weights should correspond to the position of the options. Default weight is 1.")
-    async def randomizer(self, interaction: discord.Interaction, options: str, wait: str, weights: str):
+    async def weighted(self, interaction: discord.Interaction, options: str, wait: str, weights: str):
         loadEmoji = "<a:loading:1261772710539952149>"
         try:
             waitTime = float(wait)
@@ -72,5 +74,15 @@ class Randomizer(commands.Cog):
 
         await interaction.edit_original_response(content = f"The Winner is... {weightedOptions[random.randint(0, (len(optionsList) - 1))]}")
 
+    @randomizer.command(name = "help", description = "Find out how to use randomizer commands!")
+    async def help(self, interaction: discord.Interaction, command: str = "all"):
+        if command == "randomizer":
+            embed = discord.Embed(title = "Randomizer Weighted Command", description = "This command allows you to input as many options to be randomly chosen from as you want, assign a time until the random option is chosem. and assign weights to each option to give each option a better or worse chance at being chosen!",color = discord.Colour.gold())
+            embed.add_field(name = "options", value = "These are the options the randomizer will choose from. They can include any character except for commas (,). Add a comma in between each option.")
+            embed.add_field(name = "wait", value = "This is the time the randomizer will wait before choosing a winner. By default the number input will be seconds, but can you add m or h for minutes and hours respectively instead.")
+            embed.add_field(name = "weights", value = "This allows you to assign certain weights to each option. Add the weights in the same order as the options that you want to assign them to and separate each weight by a comma (,). Default weight is 1.")
+            embed.add_field(name = "Example", value = "```/randomizer weighted options: TestA,TestB,TestC,TestD,TestE wait: 1m weights: 1,2,3,4,5```\nThis will add the options TestA, TestB, TestC, TestD, and TestE to the randomizer and wait 1 minute to choose the winner. TestA is assigned a weight of 1, TestB is assigned a weight of 2, and so on and so forth.")
+
+            await interaction.response(embed = embed)
 async def setup(client):
     await client.add_cog(Randomizer(client))
