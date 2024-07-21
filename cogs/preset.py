@@ -49,7 +49,13 @@ class Preset(commands.Cog):
         )
 
         async def on_submit(self, interaction: discord.Interaction):
-            if self.description == None:
+            self.weights = str(self.weights)
+            self.name = str(self.name)
+            self.description = str(self.description)
+            self.options = str(self.options)
+            self.waitTime = str(self.waitTime)
+
+            if self.description == "":
                 self.description = "No Description Provided"
 
             db = sqlite3.connect("main.sqlite")
@@ -58,7 +64,7 @@ class Preset(commands.Cog):
             cursor.execute("CREATE TABLE IF NOT EXISTS presets(name TEXT, description TEXT, options TEXT, weights TEXT, waitTime TEXT, userID INT)")
             db.commit()
 
-            cursor.execute("INSERT INTO presets(name, description, options, weights, waitTime, userID) VALUES (?, ?, ?, ?, ?)", (self.name, self.description, self.options, self.weights, self.waitTime, interaction.user.id))
+            cursor.execute("INSERT INTO presets(name, description, options, weights, waitTime, userID) VALUES (?, ?, ?, ?, ?, ?)", (self.name, self.description, self.options, self.weights, self.waitTime, interaction.user.id))
             db.commit()
 
             await interaction.response.send_message(embed = discord.Embed(title = f"Your Preset __{self.name}__ was created", color = discord.Colour.green()))
@@ -67,7 +73,6 @@ class Preset(commands.Cog):
     @preset.command(name = "create", description = "Create a randomizer preset and save it to use later")
     async def create(self, interaction: discord.Interaction):
         await interaction.response.send_modal(self.CreateModal())
-        print(0)
     
 async def setup(client):
     await client.add_cog(Preset(client))
