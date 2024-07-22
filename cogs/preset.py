@@ -71,6 +71,76 @@ class Preset(commands.Cog):
 
             await interaction.response.send_message(embed = discord.Embed(title = f"Your Preset __{self.name}__ was created", color = discord.Colour.green()))
         
+    class EditSelect(discord.ui.Select):
+        def __init__(self, userID: int):
+            self.userID = userID
+            options = []
+
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+
+            cursor.execute(f"SELECT * FROM presets WHERE userID = {userID}")
+            results = cursor.fetchall()
+
+            resultsDict = {}
+            for i in results:
+                options.append(discord.SelectOption(label = i[0], description = i[1]))
+                resultsDict[i[0]] = list(i)
+
+            super().__init__(placeholder = "Select The Preset To Edit", max_values = 1, min_values = 1, options = options)
+
+        async def callback(self, interaction: discord.Interaction):
+            embed = discord.Embed(title = self.values[0], color = discord.Colour.blue())
+
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+
+            cursor.execute(f"SELECT * FROM presets WHERE userID = {interaction.user.id}")
+            resultsUnformatted = cursor.fetchall()
+
+            for i in resultsUnformatted:
+                if i[0] == self.values[0]:
+                    i = list(i)
+                    optionsList = []
+                    i[2] = i[2].replace(", ", ",").replace(" ,", ",") + ","
+                    for n in i[2]:
+                        if n == ",":
+                            optionsList.append(i[2][:i[2].index(",")])
+                            i[2] = i[2][i[2].index(",")+1:]
+
+                    i[2] = optionsList
+
+                    weightsList = []
+                    i[3] = i[3].replace(", ", ",").replace(" ,", ",") + ","
+                    for n in i[3]:
+                        if n == ",":
+                            try:
+                                weightsList.append(int(i[3][:i[3].index(",")]))
+                                i[3] = i[3][i[3].index(",")+1:]
+                            except:
+                                weightsList.append(1)
+                                i[3] = i[3][i[3].index(",")+1:]
+
+                    for n in range(len(optionsList)):
+                        try:
+                            emptyVar = weightsList[n]
+                        except:
+                            weightsList.append(1)
+
+                    i[3] = weightsList
+
+                    fieldValue = f"Description:\n{i[1]}\n\nWait Time: {i[4]}\n\n"
+                    for n in range(len(i[2])):
+                        fieldValue = fieldValue + f"Option: {i[2][n]} - Weight: {i[3][n]}\n"
+                    embed.add_field(name = "Information:", value = fieldValue, inline = False)
+
+                    await interaction.response.edit_message(embed = embed)
+                    break
+
+    class EditSelectView(discord.ui.View):
+        def __init__(self, *, timeout = 180, userID):
+            super().__init__(timeout = timeout)
+            self.add_item(Preset.EditSelect(userID = userID))
 
     @preset.command(name = "create", description = "Create a randomizer preset and save it to use later")
     async def create(self, interaction: discord.Interaction):
@@ -126,6 +196,10 @@ class Preset(commands.Cog):
             embed.add_field(name = i[0], value = fieldValue, inline = False)
 
         await interaction.response.send_message(embed = embed, ephemeral = True)
+
+    @preset.command(name = "edit", description = "Edit your randomizer presets")
+    async def edit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(view = self.EditSelectView(userID = interaction.user.id))
     
 async def setup(client):
     await client.add_cog(Preset(client))
