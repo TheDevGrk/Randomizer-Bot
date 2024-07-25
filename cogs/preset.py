@@ -1,3 +1,4 @@
+from typing import Any
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -134,13 +135,56 @@ class Preset(commands.Cog):
                         fieldValue = fieldValue + f"Option: {i[2][n]} - Weight: {i[3][n]}\n"
                     embed.add_field(name = "Information:", value = fieldValue, inline = False)
 
-                    await interaction.response.edit_message(embed = embed)
+                    await interaction.response.edit_message(embed = embed, view = Preset.EditTypeSelectView(name = i[0]))
                     break
 
     class EditSelectView(discord.ui.View):
         def __init__(self, *, timeout = 180, userID):
             super().__init__(timeout = timeout)
             self.add_item(Preset.EditSelect(userID = userID))
+
+    class EditModal(discord.ui.Modal, title = "Edit Your Preset"):
+        def __init__(self, name):
+            self.name = name
+            print(4)
+        edit = discord.ui.TextInput(
+            label = "New Value",
+            placeholder = "Enter the new edited value",
+            style = discord.TextStyle.paragraph
+        )
+
+        async def on_submit(self, interaction: discord.Interaction):
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+            cursor.execute(f"UPDATE presets SET {self.title[5:]} = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            print(5)
+            db.commit()
+            cursor.close()
+            db.close()
+
+            await interaction.response.send_message(embed = discord.Embed(title = "Editted your preset!", color = discord.Colour.green()))
+
+    class EditTypeSelect(discord.ui.Select):
+        def __init__(self, name):
+            options = [discord.SelectOption(label = "Edit Name", description = "Edit the Preset Name"), 
+                       discord.SelectOption(label = "Edit Description", description = "Edit the Preset Description"),
+                       discord.SelectOption(label = "Edit Options", description = "Edit the Preset Randomizer Options"),
+                       discord.SelectOption(label = "Edit Weights", description = "Edit the Preset Randomizer Option Weights"),
+                       discord.SelectOption(label = "Edit Wait Time", description = "Edit the Preset Randomizer Wait Time")]
+            self.name = name
+            
+            super().__init__(placeholder = "Select The Property To Edit", max_values = 1, min_values = 1, options = options)
+
+        async def callback(self, interaction: discord.Interaction):
+            print(self.name)
+            await interaction.response.send_modal(Preset.EditModal(name = self.name, title = f"Edit {self.values[0][5:][0].lower() + self.values[0][6:].replace(" ", "")}"))
+            print(3)
+
+    class EditTypeSelectView(discord.ui.View):
+        def __init__(self, *, timeout = 180, name):
+            super().__init__(timeout = timeout)
+            self.add_item(Preset.EditTypeSelect(name = name))
+            print(2)
 
     @preset.command(name = "create", description = "Create a randomizer preset and save it to use later")
     async def create(self, interaction: discord.Interaction):
