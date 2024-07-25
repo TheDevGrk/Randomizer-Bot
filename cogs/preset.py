@@ -3,6 +3,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import sqlite3
+import asyncio
+import random
 
 class Preset(commands.Cog):
     def __init__(self, client):
@@ -72,9 +74,26 @@ class Preset(commands.Cog):
 
             await interaction.response.send_message(embed = discord.Embed(title = f"Your Preset __{self.name}__ was created", color = discord.Colour.green()))
         
-    class EditSelect(discord.ui.Select):
-        def __init__(self, userID: int):
+    class PresetRandomizerButtons(discord.ui.View):
+        def __init__(self, *, timeout: float = None, optionsList: list, weightsList: list):
+            super().__init__(timeout=timeout)
+            self.optionsList = optionsList
+            self.weightsList = weightsList
+
+        @discord.ui.button(label = "View Randomizer Options", style = discord.ButtonStyle.green)
+        async def viewOptions(self, interaction: discord.Interaction, button: discord.ui.Button):
+            embed = discord.Embed(title = "Preset Randomizer Options", description = "Below are the options that were inputted for this randomizer and their weights.", color = discord.Colour.green())
+            fieldValue = ""
+            for i in range(len(self.optionsList)):
+                fieldValue = fieldValue + f"Option: {self.optionsList[i]} - Weight: {self.weightsList[i]}\n"
+            embed.add_field(name = "------------------------", value = fieldValue)
+
+            await interaction.response.send_message(embed = embed, ephemeral = True)
+
+    class PresetSelect(discord.ui.Select):
+        def __init__(self, userID: int, cmd):
             self.userID = userID
+            self.cmd = cmd
             options = []
 
             db = sqlite3.connect("main.sqlite")
@@ -88,60 +107,120 @@ class Preset(commands.Cog):
                 options.append(discord.SelectOption(label = i[0], description = i[1]))
                 resultsDict[i[0]] = list(i)
 
-            super().__init__(placeholder = "Select The Preset To Edit", max_values = 1, min_values = 1, options = options)
+            super().__init__(placeholder = "Select The Preset", max_values = 1, min_values = 1, options = options)
 
         async def callback(self, interaction: discord.Interaction):
-            embed = discord.Embed(title = self.values[0], color = discord.Colour.blue())
-
             db = sqlite3.connect("main.sqlite")
             cursor = db.cursor()
 
             cursor.execute(f"SELECT * FROM presets WHERE userID = {interaction.user.id}")
             resultsUnformatted = cursor.fetchall()
+            
+            if self.cmd == "edit":
+                embed = discord.Embed(title = self.values[0], color = discord.Colour.blue())
 
-            for i in resultsUnformatted:
-                if i[0] == self.values[0]:
-                    i = list(i)
-                    optionsList = []
-                    i[2] = i[2].replace(", ", ",").replace(" ,", ",") + ","
-                    for n in i[2]:
-                        if n == ",":
-                            optionsList.append(i[2][:i[2].index(",")])
-                            i[2] = i[2][i[2].index(",")+1:]
+                for i in resultsUnformatted:
+                    if i[0] == self.values[0]:
+                        i = list(i)
+                        optionsList = []
+                        i[2] = i[2].replace(", ", ",").replace(" ,", ",") + ","
+                        for n in i[2]:
+                            if n == ",":
+                                optionsList.append(i[2][:i[2].index(",")])
+                                i[2] = i[2][i[2].index(",")+1:]
 
-                    i[2] = optionsList
+                        i[2] = optionsList
 
-                    weightsList = []
-                    i[3] = i[3].replace(", ", ",").replace(" ,", ",") + ","
-                    for n in i[3]:
-                        if n == ",":
+                        weightsList = []
+                        i[3] = i[3].replace(", ", ",").replace(" ,", ",") + ","
+                        for n in i[3]:
+                            if n == ",":
+                                try:
+                                    weightsList.append(int(i[3][:i[3].index(",")]))
+                                    i[3] = i[3][i[3].index(",")+1:]
+                                except:
+                                    weightsList.append(1)
+                                    i[3] = i[3][i[3].index(",")+1:]
+
+                        for n in range(len(optionsList)):
                             try:
-                                weightsList.append(int(i[3][:i[3].index(",")]))
-                                i[3] = i[3][i[3].index(",")+1:]
+                                emptyVar = weightsList[n]
                             except:
                                 weightsList.append(1)
-                                i[3] = i[3][i[3].index(",")+1:]
 
-                    for n in range(len(optionsList)):
+                        i[3] = weightsList
+
+                        fieldValue = f"Description:\n{i[1]}\n\nWait Time: {i[4]}\n\n"
+                        for n in range(len(i[2])):
+                            fieldValue = fieldValue + f"Option: {i[2][n]} - Weight: {i[3][n]}\n"
+                        embed.add_field(name = "Information:", value = fieldValue, inline = False)
+
+                        await interaction.response.edit_message(embed = embed, view = Preset.EditTypeSelectView(name = i[0]))
+                        break
+            
+            elif self.cmd == "run":
+                for i in resultsUnformatted:
+                    if i[0] == self.values[0]:
+                        loadEmoji = "<a:loading:1261772710539952149>"
+                        
+                        wait = i[4]
+                        options = i[2]
+                        weights = i[3]
+
                         try:
-                            emptyVar = weightsList[n]
+                            waitTime = float(wait)
                         except:
-                            weightsList.append(1)
+                            for n in wait:
+                                if n not in "1234567890.smh":
+                                    wait = wait[:wait.index(n)] + wait[wait.index(n) + 1:]
+                            for n in wait:
+                                if n.lower() == "s":
+                                    waitTime = float(wait[:wait.lower().index("s")])
+                                elif n.lower() == "m":
+                                    waitTime = float(wait[:wait.lower().index("m")]) * 60
+                                elif n.lower() == "h":
+                                    waitTime = float(wait[:wait.lower().index("h")]) * 3600
 
-                    i[3] = weightsList
+                        optionsList = []
+                        options = options.replace(", ", ",").replace(" ,", ",") + ","
+                        for n in options:
+                            if n == ",":
+                                optionsList.append(options[:options.index(",")])
+                                options = options[options.index(",")+1:]
 
-                    fieldValue = f"Description:\n{i[1]}\n\nWait Time: {i[4]}\n\n"
-                    for n in range(len(i[2])):
-                        fieldValue = fieldValue + f"Option: {i[2][n]} - Weight: {i[3][n]}\n"
-                    embed.add_field(name = "Information:", value = fieldValue, inline = False)
+                        weightsList = []
+                        weights = weights.replace(", ", ",").replace(" ,", ",") + ","
+                        for n in weights:
+                            if n == ",":
+                                try:
+                                    weightsList.append(int(weights[:weights.index(",")]))
+                                    weights = weights[weights.index(",")+1:]
+                                except:
+                                    weightsList.append(1)
+                                    weights = weights[weights.index(",")+1:]
 
-                    await interaction.response.edit_message(embed = embed, view = Preset.EditTypeSelectView(name = i[0]))
-                    break
+                        for n in range(len(optionsList)):
+                            try:
+                                emptyVar = weightsList[n]
+                            except:
+                                weightsList.append(1)
 
-    class EditSelectView(discord.ui.View):
-        def __init__(self, *, timeout = 180, userID):
+                        weightedOptions = []
+                        for n in range(len(optionsList)):
+                            for x in range(weightsList[n]):
+                                weightedOptions.append(optionsList[n])
+
+                        buttonClass = Preset.PresetRandomizerButtons(optionsList = optionsList, weightsList = weightsList)
+                        await interaction.response.send_message(embed = discord.Embed(title = "Thinking " + loadEmoji, color = discord.Colour.blue()), view = buttonClass)
+
+                        await asyncio.sleep(waitTime)
+
+                        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(optionsList) - 1))]}**__", color = discord.Colour.blue()))
+
+    class PresetSelectView(discord.ui.View):
+        def __init__(self, *, timeout = 180, userID, cmd):
             super().__init__(timeout = timeout)
-            self.add_item(Preset.EditSelect(userID = userID))
+            self.add_item(Preset.PresetSelect(userID = userID, cmd = cmd))
 
     class EditModal(discord.ui.Modal):
         edit = discord.ui.TextInput(
@@ -242,7 +321,11 @@ class Preset(commands.Cog):
 
     @preset.command(name = "edit", description = "Edit your randomizer presets")
     async def edit(self, interaction: discord.Interaction):
-        await interaction.response.send_message(view = self.EditSelectView(userID = interaction.user.id))
+        await interaction.response.send_message(view = self.PresetSelectView(userID = interaction.user.id, cmd = "edit"))
+
+    @preset.command(name = "run", description = "Run one of your randomizer presets")
+    async def run(self, interaction: discord.Interaction):
+        await interaction.response.send_message(view = self.PresetSelectView(userID = interaction.user.id, cmd = "run"))
     
 async def setup(client):
     await client.add_cog(Preset(client))
