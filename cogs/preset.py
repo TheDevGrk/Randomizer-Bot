@@ -222,27 +222,119 @@ class Preset(commands.Cog):
             super().__init__(timeout = timeout)
             self.add_item(Preset.PresetSelect(userID = userID, cmd = cmd))
 
-    class EditModal(discord.ui.Modal):
+    class EditNameModal(discord.ui.Modal):
         edit = discord.ui.TextInput(
-            label = "New Value",
-            placeholder = "Enter the new edited value",
-            style = discord.TextStyle.paragraph
+            label = "New Edited Name",
+            placeholder = "Enter the new edited name",
+            max_length = 32,
+            min_length = 1,
+            required = True
         )
 
-        def __init__(self, name, type):
+        def __init__(self, name):
             self.name = name
-            self.type = type
-            super().__init__(title = "Edit Your Preset")
+            
+            super().__init__(title = "Edit Your Preset Name")
 
         async def on_submit(self, interaction: discord.Interaction):
             db = sqlite3.connect("main.sqlite")
             cursor = db.cursor()
-            cursor.execute(f"UPDATE presets SET {self.type} = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            cursor.execute(f"UPDATE presets SET name = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
             db.commit()
             cursor.close()
             db.close()
 
-            await interaction.response.send_message(embed = discord.Embed(title = "Editted your preset!", color = discord.Colour.green()))
+            await interaction.response.send_message(embed = discord.Embed(title = "Edited your preset name successfully!", color = discord.Colour.green()))
+
+    class EditDescriptionModal(discord.ui.Modal):
+        edit = discord.ui.TextInput(
+            label = "New Edited Description",
+            placeholder = "Enter the new edited description",
+            required = True,
+            style = discord.TextStyle.paragraph,
+            max_length = 512
+        )
+
+        def __init__(self, name):
+            self.name = name
+            
+            super().__init__(title = "Edit Your Preset Description")
+
+        async def on_submit(self, interaction: discord.Interaction):
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+            cursor.execute(f"UPDATE presets SET description = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            db.commit()
+            cursor.close()
+            db.close()
+
+            await interaction.response.send_message(embed = discord.Embed(title = "Edited your preset description successfully!", color = discord.Colour.green()))
+        
+    class EditOptionsModal(discord.ui.Modal):
+        edit = discord.ui.TextInput(
+            label = "New Edited Options",
+            placeholder = "Enter the new edited options. Add a comma in between each option.",
+            required = True,
+            min_length = 3
+        )
+
+        def __init__(self, name):
+            self.name = name
+            
+            super().__init__(title = "Edit Your Preset Options")
+
+        async def on_submit(self, interaction: discord.Interaction):
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+            cursor.execute(f"UPDATE presets SET options = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            db.commit()
+            cursor.close()
+            db.close()
+
+            await interaction.response.send_message(embed = discord.Embed(title = "Edited your preset options successfully!", color = discord.Colour.green()))
+    
+    class EditWeightsModal(discord.ui.Modal):
+        edit = discord.ui.TextInput(
+            label = "New Edited Weights",
+            placeholder = "Add the weights in the same order as the options and separate each by a comma.",
+            required = True
+        )
+
+        def __init__(self, name):
+            self.name = name
+            
+            super().__init__(title = "Edit Your Preset Weights")
+
+        async def on_submit(self, interaction: discord.Interaction):
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+            cursor.execute(f"UPDATE presets SET weights = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            db.commit()
+            cursor.close()
+            db.close()
+
+            await interaction.response.send_message(embed = discord.Embed(title = "Edited your preset weights successfully!", color = discord.Colour.green()))
+
+    class EditWaitTimeModal(discord.ui.Modal):
+        edit = discord.ui.TextInput(
+            label = "New Edited Name",
+            placeholder = "This is how long the randomizer will run for. Add s, m, or h for seconds, minutes, and hours.",
+            required = True
+        )
+
+        def __init__(self, name):
+            self.name = name
+            super().__init__(title = "Edit Your Preset Wait Time")
+
+        async def on_submit(self, interaction: discord.Interaction):
+            db = sqlite3.connect("main.sqlite")
+            cursor = db.cursor()
+            cursor.execute(f"UPDATE presets SET waitTime = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
+            db.commit()
+            cursor.close()
+            db.close()
+
+            await interaction.response.send_message(embed = discord.Embed(title = "Edited your preset wait time successfully!", color = discord.Colour.green()))
 
     class EditTypeSelect(discord.ui.Select):
         def __init__(self, name):
@@ -256,8 +348,16 @@ class Preset(commands.Cog):
             super().__init__(placeholder = "Select The Property To Edit", max_values = 1, min_values = 1, options = options)
 
         async def callback(self, interaction: discord.Interaction):
-            
-            await interaction.response.send_modal(Preset.EditModal(name = self.name, type = f"{self.values[0][5:][0].lower() + self.values[0][6:].replace(" ", "")}"))
+            if self.values[0] == "Edit Name":
+                await interaction.response.send_modal(Preset.EditNameModal(name = self.name))
+            elif self.values[0] == "Edit Description":
+                await interaction.response.send_modal(Preset.EditDescriptionModal(name = self.name))
+            elif self.values[0] == "Edit Options":
+                await interaction.response.send_modal(Preset.EditOptionsModal(name = self.name))
+            elif self.values[0] == "Edit Weights":
+                await interaction.response.send_modal(Preset.EditWeightsModal(name = self.name))
+            elif self.values[0] == "Edit Wait Time":
+                await interaction.response.send_modal(Preset.EditWaitTimeModal(name = self.name))
 
     class EditTypeSelectView(discord.ui.View):
         def __init__(self, *, timeout = 180, name):
