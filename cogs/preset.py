@@ -143,21 +143,22 @@ class Preset(commands.Cog):
             super().__init__(timeout = timeout)
             self.add_item(Preset.EditSelect(userID = userID))
 
-    class EditModal(discord.ui.Modal, title = "Edit Your Preset"):
-        def __init__(self, name):
-            self.name = name
-            print(4)
+    class EditModal(discord.ui.Modal):
         edit = discord.ui.TextInput(
             label = "New Value",
             placeholder = "Enter the new edited value",
             style = discord.TextStyle.paragraph
         )
 
+        def __init__(self, name, type):
+            self.name = name
+            self.type = type
+            super().__init__(title = "Edit Your Preset")
+
         async def on_submit(self, interaction: discord.Interaction):
             db = sqlite3.connect("main.sqlite")
             cursor = db.cursor()
-            cursor.execute(f"UPDATE presets SET {self.title[5:]} = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
-            print(5)
+            cursor.execute(f"UPDATE presets SET {self.type} = ? WHERE userID = ? AND name = ?", (str(self.edit), interaction.user.id, self.name))
             db.commit()
             cursor.close()
             db.close()
@@ -176,15 +177,13 @@ class Preset(commands.Cog):
             super().__init__(placeholder = "Select The Property To Edit", max_values = 1, min_values = 1, options = options)
 
         async def callback(self, interaction: discord.Interaction):
-            print(self.name)
-            await interaction.response.send_modal(Preset.EditModal(name = self.name, title = f"Edit {self.values[0][5:][0].lower() + self.values[0][6:].replace(" ", "")}"))
-            print(3)
+            
+            await interaction.response.send_modal(Preset.EditModal(name = self.name, type = f"{self.values[0][5:][0].lower() + self.values[0][6:].replace(" ", "")}"))
 
     class EditTypeSelectView(discord.ui.View):
         def __init__(self, *, timeout = 180, name):
             super().__init__(timeout = timeout)
             self.add_item(Preset.EditTypeSelect(name = name))
-            print(2)
 
     @preset.command(name = "create", description = "Create a randomizer preset and save it to use later")
     async def create(self, interaction: discord.Interaction):
