@@ -85,7 +85,7 @@ class Randomizer(commands.Cog):
 
         await asyncio.sleep(waitTime)
 
-        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(optionsList) - 1))]}**__", color = discord.Colour.blue()))
+        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(weightedOptions) - 1))]}**__", color = discord.Colour.blue()))
 
     @randomizer.command(name = "help", description = "Find out how to use randomizer commands!")
     async def help(self, interaction: discord.Interaction, command: str = "all"):

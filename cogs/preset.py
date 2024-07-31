@@ -214,7 +214,7 @@ class Preset(commands.Cog):
 
                         await asyncio.sleep(waitTime)
 
-                        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(optionsList) - 1))]}**__", color = discord.Colour.blue()))
+                        await interaction.edit_original_response(embed = discord.Embed(title = f"The winner is... __**{weightedOptions[random.randint(0, (len(weightedOptions) - 1))]}**__", color = discord.Colour.blue()))
 
     class PresetSelectView(discord.ui.View):
         def __init__(self, *, timeout = 180, userID, cmd):
